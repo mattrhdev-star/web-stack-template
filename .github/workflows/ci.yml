@@ -1,4 +1,4 @@
-name: Secure Build, Sign & Deploy
+name: Bootstrap and Deploy
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
 permissions:
   contents: write
   id-token: write     # Required for Sigstore keyless signing
-  attestations: write # Required for GitHub Artifact Attestations
+  attestations: write
+    # Crucial: allows the runner to push the lockfile back to your repo
 
 jobs:
   build-and-sign:
@@ -21,8 +22,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run Hardened Build
-        run: bash scripts/build.sh
+      # STEP A: BOOTSTRAP THE LOCKFILE
+      # This runs only if the lockfile is missing or broken
+      - name: Generate Lockfile
+        run: |
+          npm install
+          npm install --save-dev @cyclonedx/cyclonedx-npm esbuild typescript @types/node
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -39,11 +44,22 @@ jobs:
             dist/bundle.js
             dist/bom.json
 
+      # STEP B: PUSH BACK TO REPO
+      # This saves the generated file so future runs can use 'npm ci'
+      - name: Commit Lockfile
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bootstrap package-lock.json [skip ci]"
+          file_pattern: 'package-lock.json'
+
       - name: Upload Artifacts to Release
         uses: actions/upload-artifact@v4
         with:
           name: secure-calculator-bundle
           path: dist/
+
+      - name: Run Build Script
+        run: bash scripts/build.sh
 
       - name: Deploy to GH Pages
         uses: JamesIves/github-pages-deploy-action@v4
