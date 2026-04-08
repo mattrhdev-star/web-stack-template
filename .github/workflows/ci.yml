@@ -22,12 +22,16 @@ jobs:
         with:
           node-version: '20'
 
+
       # STEP A: BOOTSTRAP THE LOCKFILE
       # This runs only if the lockfile is missing or broken
       - name: Generate Lockfile
         run: |
           npm install
           npm install --save-dev @cyclonedx/cyclonedx-npm esbuild typescript @types/node
+
+      - name: Run Build Script
+        run: bash scripts/build.sh
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -58,8 +62,6 @@ jobs:
           name: secure-calculator-bundle
           path: dist/
 
-      - name: Run Build Script
-        run: bash scripts/build.sh
 
       - name: Deploy to GH Pages
         uses: JamesIves/github-pages-deploy-action@v4
