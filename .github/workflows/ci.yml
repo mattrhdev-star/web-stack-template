@@ -1,18 +1,28 @@
-name: Node.js CI
+name: Deploy to GitHub Pages
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Run Install Script
-      run: bash scripts/install.sh
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Build Script
+        run: bash scripts/build.sh
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: public # This is the folder containing your index.html and bundle.js

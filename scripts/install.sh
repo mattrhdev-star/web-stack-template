@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Starting installation..."
+# Install dependencies
 npm install
-echo "Build check..."
-npm run build
+# Bundle TypeScript into a single JS file in the public folder
+npx esbuild src/index.ts --bundle --outfile=public/bundle.js
