@@ -1,0 +1,15 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2023-12345", 
+      "analysis": {
+        "state": "not_affected",
+        "detail": "The vulnerable function in the dependency is never called by this calculator app.",
+        "justification": "code_not_reachable"
+      }
+    }
+  ]
+}
