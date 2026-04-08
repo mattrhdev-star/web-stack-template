@@ -5,8 +5,8 @@
     "build": "bash scripts/build.sh"
   },
     "devDependencies": {
-    "@cyclonedx/cyclonedx-npm": "^4.2.1",
+    "@cyclonedx/cyclonedx-npm": "latest",
     "esbuild": "latest",
-    "typescript": "^5.3.3"
+    "typescript": "latest"
     }
 }
