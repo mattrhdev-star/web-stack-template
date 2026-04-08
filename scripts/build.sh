@@ -1,48 +1,54 @@
 #!/bin/bash
-set -e # Exit immediately if any command fails
+set -e 
 
 echo "--- 1. Environment Setup ---"
 mkdir -p dist
 mkdir -p public
 
-echo "--- 2. Dependency Sync ---"
-# We use install to ensure the lockfile is generated/synced
+echo "--- 2. Dependency Sync & Integrity Check ---"
+# 'npm install' ensures we have the tools, but we add an audit gate
 npm install
+npm audit --audit-level=high
 
-echo "--- 3. Compiling & Bundling ---"
-# Ensure the source file actually exists
+echo "--- 3. Static Analysis (Code Vulnerabilities) ---"
+# Gate: If the TypeScript is broken or "unsafe", the build fails here.
+npx tsc --noEmit
+
+echo "--- 4. Supply Chain Scan (Trivy + VEX) ---"
+# Gate: Scans for CVEs. Fails if CRITICAL/HIGH found (unless in VEX).
+if command -v trivy &> /dev/null; then
+    trivy fs . \
+      --exit-code 1 \
+      --severity HIGH,CRITICAL \
+      --vex security/project.vex.json \
+      --format table
+else
+    echo "Trivy not found, skipping deep scan. Falling back to npm audit."
+fi
+
+echo "--- 5. Compiling & Bundling ---"
 if [ ! -f "src/index.ts" ]; then
-    echo "Error: src/index.ts not found. Check your file structure."
+    echo "Error: src/index.ts not found."
     exit 1
 fi
 
-# Run the bundler
+# The bundle is ONLY created if all previous gates passed
 npx esbuild src/index.ts --bundle --minify --outfile=dist/bundle.js
 
-echo "--- 4. Integrity Check ---"
-if [ -f "dist/bundle.js" ]; then
-    echo "Success: dist/bundle.js is ready for signing."
-else
-    echo "Error: esbuild completed but dist/bundle.js is missing!"
+echo "--- 6. Integrity Verification ---"
+if [ ! -f "dist/bundle.js" ]; then
+    echo "Error: Bundle creation failed."
     exit 1
 fi
 
-echo "--- 5. Security Artifacts ---"
+echo "--- 7. Generating Security Artifacts ---"
+# Generate the SBOM (The ingredients list)
 npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file dist/bom.json
 
-# Copy static assets
-cp public/index.html dist/ 2>/dev/null || echo "No index.html found"
-cp public/style.css dist/ 2>/dev/null || echo "No style.css found"
+# Copy VEX and static assets
+[ -f "security/project.vex.json" ] && cp security/project.vex.json dist/
+[ -f "public/index.html" ] && cp public/index.html dist/
+[ -f "public/style.css" ] && cp public/style.css dist/
 
-echo "--- Build Process Complete ---"
+echo "--- ✅ Build Process Securely Complete ---"
 
-echo "--- 5. Generate SBOM ---"
-npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file dist/bom.json
-
-
-# Copy VEX for transparency
-if [ -f "security/project.vex.json" ]; then
-    cp security/project.vex.json dist/
-fi
-
-echo "Build artifacts ready in ./dist"
