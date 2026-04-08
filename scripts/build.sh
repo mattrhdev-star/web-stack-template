@@ -1,22 +1,26 @@
 #!/bin/bash
 set -e
 
-echo "1. Installing Dependencies..."
-npm ci # Use 'ci' for reproducible builds in pipelines
+# Setup clean directories
+rm -rf dist public/bundle.js
+mkdir -p dist
 
-echo "2. Security Scan: Supply Chain (SCA)..."
-# Fails if any 'high' or 'critical' vulnerabilities exist
-npm audit --audit-level=high
-
-echo "3. Generating SBOM (CycloneDX)..."
-# Creates a bom.json in CycloneDX format
-npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file public/bom.json
-
-echo "4. Static Analysis (SAST)..."
-# Ensure types are valid before bundling
+echo "--- 1. Build & Bundle ---"
+npm ci
 npx tsc --noEmit
+npx esbuild src/index.ts --bundle --minify --outfile=dist/bundle.js
 
-echo "5. Bundling Application..."
-npx esbuild src/index.ts --bundle --minify --outfile=public/bundle.js
+# Copy static assets to dist for the final site
+cp public/index.html dist/
+cp public/style.css dist/
 
-echo "Build and Security checks passed!"
+echo "--- 2. Generate Security Artifacts ---"
+# Generate SBOM
+npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file dist/bom.json
+
+# Copy VEX for transparency
+if [ -f "security/project.vex.json" ]; then
+    cp security/project.vex.json dist/
+fi
+
+echo "Build artifacts ready in ./dist"

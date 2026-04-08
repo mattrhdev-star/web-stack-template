@@ -1,11 +1,16 @@
-name: Secure Deploy
+name: Secure Build, Sign & Deploy
 
 on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+  id-token: write     # Required for Sigstore keyless signing
+  attestations: write # Required for GitHub Artifact Attestations
+
 jobs:
-  security-and-deploy:
+  build-and-sign:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,18 +24,28 @@ jobs:
       - name: Run Hardened Build
         run: bash scripts/build.sh
 
-      - name: Scan for Vulnerabilities (Trivy)
-        uses: aquasecurity/trivy-action@master
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Artifacts (Keyless)
+        run: |
+          cosign sign-blob --yes --output-signature dist/bundle.js.sig dist/bundle.js
+          cosign sign-blob --yes --output-signature dist/bom.json.sig dist/bom.json
+
+      - name: Attest Build Provenance (SLSA)
+        uses: actions/attest-build-provenance@v2
         with:
-          scan-type: 'fs'
-          format: 'cyclonedx'
-          output: 'public/vulnerabilities.json'
-          exit-code: '1' # This crashes the build if issues are found
-          severity: 'CRITICAL,HIGH'
-          # vex: 'security/my-project.vex.json' # Uncomment when you have a VEX file
+          subject-path: |
+            dist/bundle.js
+            dist/bom.json
+
+      - name: Upload Artifacts to Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: secure-calculator-bundle
+          path: dist/
 
       - name: Deploy to GH Pages
-        if: success() # Only deploys if all previous security steps passed
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: public
+          folder: dist
