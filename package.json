@@ -4,10 +4,9 @@
   "scripts": {
     "build": "bash scripts/build.sh"
   },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "esbuild": "^0.20.0",
-    "@types/node": "^20.0.0",
-    "@cyclonedx/cyclonedx-npm": "^1.0.0"
-  }
+    "devDependencies": {
+    "@cyclonedx/cyclonedx-npm": "^4.2.1",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.3.3"
+    }
 }
