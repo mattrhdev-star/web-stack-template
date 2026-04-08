@@ -1,7 +1,16 @@
 #!/bin/bash
 set -e
 
-# Setup clean directories
+echo "--- 1. Clean & Install ---"
+if [ -f "package-lock.json" ]; then
+    echo "Lockfile found. Performing secure clean install..."
+    npm ci
+else
+    echo "Warning: No package-lock.json found. Falling back to npm install..."
+    # This will create the lockfile for you locally
+    npm install
+fi
+
 rm -rf dist public/bundle.js
 mkdir -p dist
 
